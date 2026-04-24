@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IONITH Web App - Core Engine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --void:      #050505; --void-2:    #090909; --s1:        #111111;
+  --s2:        #181818; --s3:        #202020; --s4:        #2a2a2a;
+  --l1:        rgba(255,255,255,0.08); --l2:        rgba(255,255,255,0.12);
+  --fg1:       rgba(255,255,255,0.95); --fg2:       rgba(255,255,255,0.75); 
+  --fg3:       rgba(255,255,255,0.55); --fg4:       rgba(255,255,255,0.35); 
+  --glass:     rgba(10,10,10,0.85); --gb:        rgba(255,255,255,0.07); 
+  --w:         #ffffff; --blue:      #3b82f6; --blue-g:    rgba(59,130,246,0.2);
+  --pro-g:     linear-gradient(135deg, #8b5cf6, #3b82f6);
+  --ff:        'DM Sans',-apple-system,system-ui,sans-serif;
+  --fm:        'DM Mono',monospace;
+  --r-sm:4px; --r-md:8px; --r-lg:12px; --r-xl:18px; --r-p:100px;
+  --sb:260px; --tb:52px; --eout:cubic-bezier(0.16,1,0.3,1);
+}
+
+body.light-mode {
+  --void:      #f9fafb; --void-2:    #f3f4f6; --s1:        #ffffff;
+  --s2:        #f3f4f6; --s3:        #e5e7eb; --s4:        #d1d5db;
+  --l1:        rgba(0,0,0,0.05); --l2:        rgba(0,0,0,0.1);
+  --fg1:       #111827; --fg2:       #374151; --fg3:       #6b7280; --fg4: #9ca3af;
+  --glass:     rgba(255,255,255,0.85); --gb:  rgba(0,0,0,0.05);
+  --w:         #000000; 
+}
+
+html,body{height:100%;font-family:var(--ff);background:var(--void);color:var(--fg1);overflow:hidden;-webkit-font-smoothing:antialiased;font-size:14px; transition: background 0.3s, color 0.3s;}
+::-webkit-scrollbar{width:3px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:var(--s4);border-radius:2px;}
+
+/* ── 🔐 LOGIN SCREEN UI ── */
+#login-ui { position: fixed; inset: 0; background: var(--void); z-index: 1000; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+.log-box { background: var(--void-2); border: 1px solid var(--l2); border-radius: var(--r-xl); width: 100%; max-width: 380px; padding: 40px 30px; box-shadow: 0 30px 60px rgba(0,0,0,0.8); text-align: center; }
+.log-logo { font-family: var(--fm); font-size: 18px; font-weight: 500; letter-spacing: 0.4em; color: var(--fg1); text-transform: uppercase; margin-bottom: 8px; }
+.log-sub { font-size: 13px; color: var(--fg3); margin-bottom: 24px; }
+.log-input { width: 100%; padding: 14px; background: var(--s1); border: 1px solid var(--l2); border-radius: var(--r-md); color: var(--fg1); font-family: var(--ff); font-size: 14px; margin-bottom: 12px; outline: none; transition: border-color 0.2s; }
+.log-input:focus { border-color: var(--blue); }
+.log-btn { width: 100%; padding: 14px; background: var(--blue); border: none; border-radius: var(--r-md); color: white; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.2s; margin-top: 4px; }
+.log-btn:hover { opacity: 0.85; }
+.g-btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; background: var(--w); border: none; border-radius: var(--r-md); color: var(--void); font-weight: 600; font-size: 13px; cursor: pointer; transition: opacity 0.2s; margin-top: 16px; }
+.g-btn:hover { opacity: 0.85; }
+.log-sep { display: flex; align-items: center; margin: 20px 0; color: var(--fg4); font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+.log-sep::before, .log-sep::after { content: ''; flex: 1; height: 1px; background: var(--l1); }
+.log-sep span { padding: 0 10px; }
+.log-tog { margin-top: 24px; font-size: 12.5px; color: var(--fg3); }
+.log-tog span { color: var(--blue); cursor: pointer; font-weight: 500; transition: color 0.2s; }
+.log-tog span:hover { color: #60a5fa; text-decoration: underline; }
+#log-err { color: #ef4444; font-size: 12px; margin-top: 12px; height: 14px; }
+
+/* ── APP WRAPPER & SIDEBAR ── */
+#app-ui { display: none; height: 100vh; width: 100vw; overflow: hidden; }
+#sb{width:var(--sb);flex-shrink:0;background:var(--void-2);border-right:1px solid var(--l1);display:flex;flex-direction:column;height:100%;transition:transform .32s var(--eout),opacity .32s;z-index:60;}
+.sbh{padding:14px 12px 12px;border-bottom:1px solid var(--l1);display:flex;flex-direction:column;gap:12px;}
+.btn-nc{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:9px 12px;background:var(--s2);border:1px solid var(--l2);border-radius:var(--r-lg);color:var(--fg1);font-family:var(--ff);font-size:13px;font-weight:500;cursor:pointer;transition:all .14s;}
+.btn-nc:hover{background:var(--s3);border-color:var(--l3);}
+.sbsrch{position:relative;}
+.sbsrch input{width:100%;padding:8px 12px 8px 30px;background:var(--s1);border:1px solid var(--l1);border-radius:var(--r-md);color:var(--fg1);font-family:var(--ff);font-size:12.5px;outline:none;transition:all .14s;}
+.sbsrch input:focus{background:var(--s2);border-color:var(--blue-g);}
+.sbsrch .sico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--fg3);}
+
+.sbm{flex:1;overflow-y:auto;padding:8px 8px;}
+.citem{display:flex;align-items:center;gap:7px;width:100%;padding:8px 10px 8px 14px;background:none;border:none;border-radius:var(--r-sm);color:var(--fg2);font-family:var(--ff);font-size:12.5px;cursor:pointer;text-align:left;transition:all .12s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;margin-bottom:2px;}
+.citem:hover{background:var(--s1);color:var(--fg1);}
+.citem.act{background:var(--s2);color:var(--fg1);}
+.citem.act::before{content:'';position:absolute;left:5px;top:50%;transform:translateY(-50%);width:3px;height:3px;border-radius:50%;background:var(--blue);}
+.citem span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+
+.sbp{padding:10px 10px 12px;border-top:1px solid var(--l1);flex-shrink:0; display:flex; flex-direction:column; gap:6px;}
+.btn-settings { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; padding: 10px 14px; background: transparent; border: 1px solid transparent; border-radius: var(--r-md); color: var(--fg2); font-family: var(--ff); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+.btn-settings:hover { background: var(--s2); color: var(--fg1); }
+
+.pcard{background:var(--s1);border:1px solid var(--l1);border-radius:var(--r-xl);padding:11px;position:relative; margin-top: 4px;}
+.ptop{display:flex;align-items:center;gap:9px;}
+.pav{width:32px;height:32px;border-radius:50%;background:var(--blue-g);border:1px solid var(--blue);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--blue);flex-shrink:0; text-transform: uppercase;}
+.pinfo{flex:1;min-width:0;}
+.pname{font-size:12.5px;font-weight:500;color:var(--fg1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;}
+.pbadge{display:inline-block;padding:2px 6px;background:rgba(156,163,175,0.15);color:var(--fg2);font-size:9px;border-radius:3px;font-weight:600;letter-spacing:0.05em;text-transform:uppercase;margin-top:4px;}
+
+.btn-out { position:absolute; top:12px; right:12px; background:none; border:none; color:var(--fg4); cursor:pointer; }
+.btn-out:hover { color: #ef4444; }
+
+/* ── MAIN ── */
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--void);}
+#tb{height:var(--tb);flex-shrink:0;display:flex;align-items:center;padding:0 18px;gap:10px;background:var(--glass);backdrop-filter:blur(40px) saturate(180%);border-bottom:1px solid var(--gb);z-index:10;}
+.tb-logo{font-family:var(--fm);font-size:12px;font-weight:500;letter-spacing:.3em;color:var(--fg1);text-transform:uppercase;}
+.tbr{margin-left:auto;display:flex;align-items:center;gap:7px;}
+.btn-keys{display:flex;align-items:center;gap:6px;padding:6px 11px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);border-radius:var(--r-p);color:var(--blue);font-family:var(--ff);font-size:12px;font-weight:600;cursor:pointer;transition:all .14s;}
+.btn-keys:hover{background:var(--blue);color:white;}
+.key-dot { width: 6px; height: 6px; background: #ef4444; border-radius: 50%; display: inline-block; }
+.key-dot.active { background: #34d399; }
+
+/* ── CHAT AREA ── */
+#ca{flex:1;overflow-y:auto;padding:28px 0;}
+.ci{max-width:660px;margin:0 auto;padding:0 22px;display:flex;flex-direction:column;gap:4px;}
+.es{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px 32px;text-align:center;}
+.es-tag{font-family:var(--fm);font-size:10.5px;font-weight:400;letter-spacing:.4em;color:var(--blue);text-transform:uppercase;margin-bottom:18px;}
+.es-h{font-size:22px;font-weight:300;color:var(--fg2);letter-spacing:-.02em;line-height:1.4;margin-bottom:7px;}
+.es-s{font-size:13px;color:var(--fg3);line-height:1.65;max-width:340px;font-weight:300;}
+
+.mg{display:flex;flex-direction:column;gap:1px; margin-bottom: 12px;}
+.mr{display:flex;gap:9px;}
+.mr.u{justify-content:flex-end;}
+.mav{width:26px;height:26px;border-radius:50%;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;font-size:9.5px;font-weight:600;font-family:var(--fm);letter-spacing:.04em; text-transform: uppercase;}
+.mav.ai{background:var(--blue-g);border:1px solid var(--blue);color:var(--blue);}
+.mav.me{background:var(--s3);border:1px solid var(--l2);color:var(--fg2);}
+.bb{max-width:80%;padding:10px 14px;font-size:13.5px;line-height:1.68;letter-spacing:.003em;}
+.bb.ai{background:var(--s1);border:1px solid var(--l1);color:var(--fg1);border-radius:3px 14px 14px 14px;}
+.bb.u{background:var(--s2);border:1px solid var(--l2);color:var(--fg1);border-radius:14px 3px 14px 14px;}
+
+/* USER IMAGE THUMBNAIL IN CHAT */
+.chat-img-thumb { max-width: 200px; border-radius: 8px; margin-bottom: 8px; border: 1px solid var(--l2); display: block;}
+
+/* ACTION BUTTONS */
+.msg-act { display: flex; gap: 6px; margin-top: 4px; margin-left: 36px; opacity: 0.3; transition: opacity 0.2s; }
+.msg-act.u { justify-content: flex-end; margin-left: 0; margin-right: 36px; }
+.mg:hover .msg-act { opacity: 1; }
+.btn-act { background: none; border: none; color: var(--fg2); cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.btn-act:hover { background: var(--s2); color: var(--fg1); }
+.btn-act.liked { color: #10b981; }
+.btn-act.disliked { color: #ef4444; }
+
+.tdot{display:inline-block;width:4px;height:4px;border-radius:50%;background:var(--fg4);animation:blink 1.2s ease-in-out infinite;}
+.tdot:nth-child(2){animation-delay:.2s;}.tdot:nth-child(3){animation-delay:.4s;}
+@keyframes blink{0%,80%,100%{opacity:.2}40%{opacity:1}}
+
+.cb-wrap {background: var(--void-2);border: 1px solid var(--l2);border-radius: var(--r-md);margin: 12px 0;overflow: hidden;}
+.cb-head {display: flex;justify-content: space-between;align-items: center;background: var(--s2);padding: 6px 12px;border-bottom: 1px solid var(--l1);}
+.cb-lang {font-family: var(--fm);font-size: 10.5px;color: var(--fg3);text-transform: uppercase;}
+.cb-body {display: block;padding: 12px;margin: 0;font-family: var(--fm);font-size: 12.5px;color: #e2e8f0;overflow-x: auto;line-height: 1.6;white-space: pre;}
+
+/* ── INPUT ZONE ── */
+#iz{flex-shrink:0;padding:14px 22px 18px;border-top:1px solid var(--l1);background:var(--void);}
+.ic{max-width:660px;margin:0 auto;position:relative;display:flex;align-items:flex-end;gap:7px;}
+.taw{flex:1;position:relative;}
+.cin{width:100%;min-height:44px;max-height:150px;padding:12px 42px 12px 16px;background:var(--s1);border:1px solid var(--l2);border-radius:var(--r-xl);color:var(--fg1);font-family:var(--ff);font-size:13.5px;line-height:1.5;outline:none;resize:none;}
+.cin:focus{background:var(--s2);border-color:var(--blue-g);}
+.bsnd{position:absolute;right:6px;bottom:6px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;background:var(--w);border:none;border-radius:10px;color:var(--void);cursor:pointer;transition:all .14s;}
+.bsnd:disabled{opacity:.18;cursor:default;}
+.bsnd:not(:disabled):hover{background:var(--blue);color:white;}
+
+/* 💡 NEW: ATTACHMENT BADGE STYLING */
+#attach-badge { display: none; position: absolute; left: 16px; top: -12px; background: var(--blue); color: white; font-family: var(--ff); font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 5; align-items: center; gap: 6px;}
+.ab-close { cursor: pointer; background: rgba(0,0,0,0.2); border-radius: 50%; width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; transition: background 0.2s; }
+.ab-close:hover { background: rgba(0,0,0,0.5); }
+
+.mwrap{position:relative; display:flex; gap:5px;}
+.bmod{display:flex;align-items:center;gap:5px;height:44px;padding:0 12px;background:var(--s2);border:1px solid var(--l2);border-radius:var(--r-xl);color:var(--fg2);font-family:var(--ff);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;}
+.bmod:hover{background:var(--s3);color:var(--fg1);}
+.bmic{width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--s2);border:1px solid var(--l2);border-radius:50%;color:var(--fg2);cursor:pointer;}
+.bmic:hover{background:var(--s3);color:var(--fg1);}
+
+/* Dropdowns */
+.dd{position:absolute;z-index:200;background:var(--glass);backdrop-filter:blur(52px) saturate(200%);border:1px solid var(--gb);border-radius:var(--r-lg);padding:5px;min-width:240px;box-shadow:0 0 0 1px rgba(0,0,0,.6),0 24px 60px rgba(0,0,0,.7);opacity:0;pointer-events:none;transform:translateY(6px) scale(.97);transition:all .17s var(--eout);}
+.dd.above{bottom:calc(100% + 9px);} .dd.ar{right:0;} .dd.al{left:0;}
+.dd.open{opacity:1;pointer-events:all;transform:translateY(0) scale(1);}
+.mopt{display:flex;align-items:flex-start;gap:12px;width:100%;padding:10px 12px;background:none;border:none;border-radius:var(--r-sm);color:var(--fg2);font-family:var(--ff);cursor:pointer;text-align:left;}
+.mopt:hover, .mopt.sel{background:var(--s2);color:var(--fg1);}
+.mbadge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:12px;flex-shrink:0;}
+.mopt .mn { display: flex; flex-direction: column; align-items: flex-start; }
+.mopt .mn-title { font-weight: 600; font-size: 13px; color: var(--fg1); }
+.mopt .mn-desc { font-size: 11px; color: var(--fg3); margin-top: 2px; line-height: 1.3;}
+.mopt.sel .mbadge{border:1px solid currentColor;}
+
+/* ── MODALS ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(5px); z-index: 999; display: none; align-items: center; justify-content: center; }
+.modal-overlay.active { display: flex; }
+.modal { background: var(--s1); border: 1px solid var(--l2); border-radius: var(--r-xl); width: 100%; max-width: 500px; padding: 28px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); max-height: 90vh; overflow-y: auto; }
+.modal-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;}
+.modal-desc { font-size: 13px; color: var(--fg3); margin-bottom: 24px; line-height: 1.5; }
+
+/* Vault Specific */
+.key-group { margin-bottom: 16px; background: var(--void-2); border: 1px solid var(--l1); border-radius: var(--r-lg); padding: 16px; }
+.kg-header { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;}
+.kg-title { font-family: var(--fm); font-size: 12px; font-weight: 600; letter-spacing: 0.05em; }
+.kg-links { display: flex; gap: 12px; font-size: 10.5px; font-weight: 600; font-family: var(--ff); }
+.kg-links a { color: var(--blue); text-decoration: none; transition: opacity 0.2s; }
+.kg-links a:hover { opacity: 0.7; text-decoration: underline; }
+.kg-row { display: flex; gap: 10px; align-items: center; }
+.k-input { flex: 2; padding: 10px; background: var(--s1); border: 1px solid var(--l2); border-radius: var(--r-sm); color: var(--fg1); font-family: var(--fm); font-size: 11px; outline: none; }
+.btn-save { width: 100%; padding: 12px; background: var(--blue); border: none; border-radius: var(--r-md); color: white; font-weight: 600; font-size: 13px; cursor: pointer; margin-top: 10px; }
+
+/* ── MASTER SETTINGS MODAL ── */
+.sm-wrapper { background: var(--s1); border: 1px solid var(--l2); border-radius: var(--r-xl); width: 100%; max-width: 840px; height: 640px; display: flex; overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.7); position: relative;}
+.sm-sb { width: 220px; background: var(--void-2); border-right: 1px solid var(--l1); padding: 24px 12px; display: flex; flex-direction: column; gap: 2px; }
+.sm-tab { padding: 10px 14px; color: var(--fg2); font-size: 13px; font-weight: 500; border-radius: var(--r-md); cursor: pointer; transition: all 0.2s; text-align: left; background: transparent; border: none; font-family: var(--ff); display:flex; align-items:center; gap:10px;}
+.sm-tab:hover { background: var(--s2); color: var(--fg1); }
+.sm-tab.active { background: var(--s3); color: var(--fg1); font-weight: 600; }
+.sm-content { flex: 1; padding: 32px 48px; overflow-y: auto; background: var(--s1); position:relative;}
+.sm-close { position:absolute; top:24px; right:32px; background:none; border:none; color:var(--fg3); cursor:pointer; padding:4px;}
+.sm-close:hover { color:var(--fg1); }
+.sm-panel { display: none; animation: smFade 0.2s ease; }
+.sm-panel.active { display: block; }
+@keyframes smFade { from {opacity:0; transform:translateY(4px);} to {opacity:1; transform:translateY(0);} }
+.sm-h2 { font-size: 18px; font-weight: 600; margin-bottom: 24px; color: var(--fg1); padding-bottom: 14px; border-bottom: 1px solid var(--l1); }
+.sm-row { display: flex; justify-content: space-between; align-items: center; padding: 18px 0; border-bottom: 1px solid var(--l1); }
+.sm-lbl { font-size: 14.5px; font-weight: 500; color: var(--fg1); }
+.sm-sub { font-size: 12.5px; color: var(--fg3); margin-top: 6px; max-width: 320px; line-height: 1.5; }
+.sm-toggle { position: relative; width: 40px; height: 22px; background: var(--s4); border-radius: 11px; cursor: pointer; transition: 0.3s; flex-shrink:0;}
+.sm-toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: var(--fg2); border-radius: 50%; transition: 0.3s; }
+.sm-toggle.on { background: #10b981; }
+.sm-toggle.on::after { transform: translateX(18px); background: #fff; }
+.sm-btn { padding: 9px 16px; background: var(--s2); border: 1px solid var(--l2); border-radius: var(--r-md); color: var(--fg1); cursor: pointer; transition: 0.2s; font-size: 13px; font-weight: 500; }
+.sm-btn:hover { background: var(--s3); }
+.sm-btn.danger { color: #ef4444; border-color: rgba(239, 68, 68, 0.3); }
+.sm-btn.danger:hover { background: rgba(239, 68, 68, 0.1); }
+.sm-btn.primary { background: var(--w); color: var(--void); font-weight: 600; border: none;}
+.sm-btn.primary:hover { opacity: 0.9; }
+
+@media(max-width:768px){ #sb{position:fixed;top:0;left:0;bottom:0;transform:translateX(-100%);opacity:0;} #sb.open{transform:translateX(0);opacity:1;} }
+</style>
+</head>
+<body>
+
+<div id="login-ui">
+  <div class="log-box">
+    <div class="log-logo">IONITH</div>
+    <div id="auth-sub" class="log-sub">Sign in to access your Omni-Agent.</div>
+    <input type="email" id="log-email" class="log-input" placeholder="Email Address">
+    <input type="password" id="log-pass" class="log-input" placeholder="Password">
+    <button class="log-btn" id="auth-main-btn" onclick="handleAuth()">Log In</button>
+    <div class="log-sep"><span>OR</span></div>
+    <button class="g-btn" onclick="googleSignIn()">
+      <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Continue with Google
+    </button>
+    <div id="log-err"></div>
+    <div class="log-tog" id="auth-toggle-text">Don't have an account? <span onclick="toggleAuthMode()">Sign up</span></div>
+  </div>
+</div>
+
+<div id="app-ui">
+<aside id="sb">
+  <div class="sbh">
+    <div class="sbsrch">
+      <span class="sico"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+      <input type="text" placeholder="Search history..." oninput="searchChats(this.value)">
+    </div>
+    <button class="btn-nc" onclick="newChat()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> New Chat</button>
+  </div>
+  <div class="sbm" id="chat-list"></div>
+  
+  <div class="sbp">
+    <button class="btn-settings" onclick="alert('Telegram integration coming soon!')">✈️ Telegram</button>
+    <button class="btn-settings" onclick="alert('AI Assistant settings coming soon!')">🤖 AI Assistant</button>
+    <button class="btn-settings" onclick="openMasterSettings()">⚙️ App Settings</button>
+
+    <div class="pcard">
+      <button class="btn-out" title="Sign Out" onclick="logout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+      <div class="ptop">
+        <div class="pav" id="user-initial">U</div>
+        <div class="pinfo">
+          <div class="pname" id="user-email-display">Loading...</div>
+          <div class="pbadge" id="plan-badge">Standard</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<div id="main">
+  <header id="tb">
+    <button class="tb-hb" onclick="document.getElementById('sb').classList.toggle('open')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+    <div class="tb-logo" id="header-ai-name">IONITH</div>
+    <div class="tbr">
+      <button class="btn-keys" onclick="openVault()"><span class="key-dot" id="k-status"></span> API Vault</button>
+    </div>
+  </header>
+
+  <div id="ca"><div class="ci" id="ci"></div></div>
+
+  <div id="iz">
+    <div class="ic">
+      <div class="mwrap" style="margin-right:8px;">
+        <button class="bmic" id="plus-btn" onclick="document.getElementById('plus-dd').classList.toggle('open')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+        <div class="dd above al" id="plus-dd">
+          <button class="mopt" onclick="alert('PDF Uploads coming in next update!')"><span class="mn-title">📄 Upload File</span></button>
+          <button class="mopt" onclick="triggerPhotoUpload()"><span class="mn-title">🖼️ Upload Photo</span></button>
+          <button class="mopt" onclick="alert('Thinking Mode toggled!')"><span class="mn-title">🧠 Thinking Mode</span></button>
+        </div>
+      </div>
+
+      <input type="file" id="hidden-img-input" accept="image/*" style="display:none;" onchange="processLocalImage(event)">
+
+      <div class="taw">
+        <div id="attach-badge">🖼️ Image Attached <span class="ab-close" onclick="clearAttachment()">✕</span></div>
+        <textarea class="cin" id="ta" rows="1" placeholder="Message..." oninput="autoResize(this)" onkeydown="checkEnter(event)"></textarea>
+        <button class="bsnd" id="snd" onclick="sendMessage()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg></button>
+      </div>
+      <div class="ir">
+        <div class="mwrap" style="margin-left:8px;">
+          <button class="bmod" id="mb" onclick="tMod()"><span class="mt" id="ml">Rapid</span><svg class="mch" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button>
+          <div class="dd above ar" id="mm">
+            
+            <button class="mopt sel" onclick="sM('Rapid', 'Groq', this)">
+              <span class="mbadge" style="background:rgba(249,115,22,0.2);color:#f97316;">⚡</span>
+              <div class="mn">
+                <span class="mn-title">Rapid</span>
+                <span class="mn-desc">Ultra-fast responses (Groq Llama 3).</span>
+              </div>
+            </button>
+            
+            <button class="mopt" onclick="sM('Reasoning', 'Google', this)">
+              <span class="mbadge" style="background:rgba(59,130,246,0.2);color:#3b82f6;">🧠</span>
+              <div class="mn">
+                <span class="mn-title">Reasoning</span>
+                <span class="mn-desc">Logic and Vision tasks (Gemini 2.5).</span>
+              </div>
+            </button>
+
+            <button class="mopt" onclick="sM('Elite', 'Claude', this)">
+              <span class="mbadge" style="background:rgba(139,92,246,0.2);color:#8b5cf6;">👑</span>
+              <div class="mn">
+                <span class="mn-title">Elite</span>
+                <span class="mn-desc">Premium coding & writing (Claude).</span>
+              </div>
+            </button>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="modal-overlay" id="key-modal">
+  <div class="modal">
+    <div class="modal-title">API Token Vault</div>
+    <p class="modal-desc">Enter your API keys below. Click the links to securely generate them.</p>
+
+    <div class="key-group">
+      <div class="kg-header">
+        <div class="kg-title" style="color:#f97316;">GROQ API KEY</div>
+        <div class="kg-links">
+          <a href="https://console.groq.com/keys" target="_blank">Get Key ↗</a>
+          <a href="https://console.groq.com/dashboard/usage" target="_blank">Usage ↗</a>
+        </div>
+      </div>
+      <div class="kg-row"><input type="password" id="k-groq" class="k-input" placeholder="gsk_xxxxxxxxxxxxxxxxxxxxx"></div>
+    </div>
+
+    <div class="key-group">
+      <div class="kg-header">
+        <div class="kg-title" style="color:#3b82f6;">GEMINI API KEY</div>
+        <div class="kg-links">
+          <a href="https://aistudio.google.com/api-keys" target="_blank">Get Key ↗</a>
+          <a href="https://aistudio.google.com/usage" target="_blank">Usage ↗</a>
+        </div>
+      </div>
+      <div class="kg-row"><input type="password" id="k-google" class="k-input" placeholder="AIzaSy_xxxxxxxxxxxxxxxxxxxxx"></div>
+    </div>
+    
+    <div class="key-group">
+      <div class="kg-header">
+        <div class="kg-title" style="color:#8b5cf6;">CLAUDE API KEY</div>
+        <div class="kg-links">
+          <a href="https://platform.claude.com/settings/workspaces/default/keys" target="_blank">Get Key ↗</a>
+          <a href="https://platform.claude.com/usage" target="_blank">Usage ↗</a>
+        </div>
+      </div>
+      <div class="kg-row"><input type="password" id="k-claude" class="k-input" placeholder="sk-ant-xxxxxxxxxxxxxxxxxxxxx"></div>
+    </div>
+
+    <div class="key-group" style="padding-top:16px; border-top:1px solid var(--l1);">
+      <div class="kg-header">
+        <div class="kg-title" style="color:#34d399;">TAVILY (WEB SEARCH)</div>
+        <div class="kg-links">
+          <a href="https://app.tavily.com/home" target="_blank">Get Key & Usage ↗</a>
+        </div>
+      </div>
+      <div class="kg-row"><input type="password" id="k-tavily" class="k-input" placeholder="tvly-xxxxxxxxxxxxxxxxxxxxx" style="width:100%;"></div>
+    </div>
+
+    <div class="key-group" style="padding-top:16px; border-top:1px solid var(--l1);">
+       <div class="kg-header">
+         <div class="kg-title" style="color:#0ea5e9;">TELEGRAM BOT TOKEN</div>
+       </div>
+       <div class="kg-row"><input type="password" id="k-telegram" class="k-input" placeholder="123456789:ABCdefGHIjklmNOPQrsTUVwxyZ" style="width:100%;"></div>
+    </div>
+
+    <button class="btn-save" onclick="saveVault()">Save Keys</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="master-settings-modal">
+  <div class="sm-wrapper">
+    <button class="sm-close" onclick="closeMasterSettings()"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
+    
+    <div class="sm-sb">
+      <button class="sm-tab active" onclick="switchSettingsTab('general', this)">⚙️ General</button>
+      <button class="sm-tab" onclick="switchSettingsTab('personalization', this)">🎨 Personalization</button>
+      <button class="sm-tab" onclick="switchSettingsTab('data', this)">📊 Data controls</button>
+      <button class="sm-tab" onclick="switchSettingsTab('security', this)">🛡️ Security</button>
+      <button class="sm-tab" onclick="switchSettingsTab('account', this)">👤 Account</button>
+    </div>
+
+    <div class="sm-content">
+      <div class="sm-panel active" id="tab-general">
+        <div class="sm-h2">General</div>
+        <div class="sm-row">
+          <div><div class="sm-lbl">Theme</div><div class="sm-sub">Toggle Light/Dark mode.</div></div>
+          <button class="sm-btn" onclick="toggleTheme()">Toggle Theme</button>
+        </div>
+      </div>
+      <div class="sm-panel" id="tab-personalization">
+        <div class="sm-h2">Personalization</div>
+        <div class="sm-row" style="flex-direction:column; align-items:flex-start;">
+          <div class="sm-lbl">AI Persona Name</div>
+          <div class="sm-sub">Give your Omni-Agent a custom identity.</div>
+          <div class="sm-act" style="width:100%;">
+            <input type="text" id="set-ainame" placeholder="e.g. Jarvis" style="width:100%; margin-top:10px; background:var(--s2); border:1px solid var(--l2); color:var(--fg1); padding:8px 12px; border-radius:var(--r-md);">
+          </div>
+        </div>
+        <button class="sm-btn primary" style="margin-top:20px;" onclick="savePersonalization()">Save Personalization</button>
+      </div>
+      <div class="sm-panel" id="tab-data">
+        <div class="sm-h2">Data controls</div>
+        <div class="sm-row" style="border-bottom:none;">
+          <div><div class="sm-lbl" style="color:#ef4444;">Delete all chats</div><div class="sm-sub">Permanently wipe your conversation history.</div></div>
+          <button class="sm-btn danger" onclick="clearLocalChats()">Delete all</button>
+        </div>
+      </div>
+      <div class="sm-panel" id="tab-security">
+        <div class="sm-h2">Security</div>
+        <div class="sm-row">
+          <div><div class="sm-lbl">Security keys & passkeys</div><div class="sm-sub">Use hardware keys to sign in securely.</div></div>
+          <button class="sm-btn" onclick="alert('Hardware Auth coming soon.')">Add ></button>
+        </div>
+        <div class="sm-row">
+          <div><div class="sm-lbl">Multi-factor authentication (MFA)</div><div class="sm-sub">Use an authenticator app for 2-step verification.</div></div>
+          <div class="sm-toggle" onclick="this.classList.toggle('on'); alert('MFA Setup trigger.')"></div>
+        </div>
+        <div class="sm-row" style="border-bottom:none;">
+          <div><div class="sm-lbl">Log out of all devices</div><div class="sm-sub">Log out of all active sessions across all devices.</div></div>
+          <button class="sm-btn danger" onclick="logout()">Log out all</button>
+        </div>
+      </div>
+      <div class="sm-panel" id="tab-account">
+        <div class="sm-h2">Account</div>
+        <div class="sm-row">
+          <div><div class="sm-lbl">Name</div></div>
+          <div class="sm-lbl" id="acct-name-display" style="color:var(--fg2);">Loading...</div>
+        </div>
+        <div class="sm-row" style="border-bottom:none;">
+          <div><div class="sm-lbl" style="color:#ef4444;">Delete account</div><div class="sm-sub">Permanently delete your account and all data.</div></div>
+          <button class="sm-btn danger" onclick="alert('Account deletion requires verification.')">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- 🔥 FIREBASE SETUP 🔥 ---
+const firebaseConfig = {
+  apiKey: "AIzaSyCghZaZFXQfglTswLP8VP74AvbYLmV2wxw",
+  authDomain: "ionith-omni-agent.firebaseapp.com",
+  projectId: "ionith-omni-agent",
+  storageBucket: "ionith-omni-agent.firebasestorage.app",
+  messagingSenderId: "174478261991",
+  appId: "1:174478261991:web:73c8957e5f8045dfbcec42"
+};
+
+if (!firebase.apps.length) { firebase.initializeApp(firebaseConfig); }
+const auth = firebase.auth();
+const db = firebase.firestore(); 
+const googleProvider = new firebase.auth.GoogleAuthProvider();
+
+let isLoginMode = true;
+
+function toggleAuthMode() {
+  isLoginMode = !isLoginMode;
+  document.getElementById('auth-sub').innerText = isLoginMode ? 'Sign in to access your Omni-Agent.' : 'Join to build your autonomous AI.';
+  document.getElementById('auth-main-btn').innerText = isLoginMode ? 'Log In' : 'Create Account';
+  if (isLoginMode) document.getElementById('auth-toggle-text').innerHTML = "Don't have an account? <span onclick='toggleAuthMode()'>Sign up</span>";
+  else document.getElementById('auth-toggle-text').innerHTML = "Already have an account? <span onclick='toggleAuthMode()'>Log in</span>";
+  document.getElementById('log-err').innerText = '';
+}
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('login-ui').style.display = 'none';
+    document.getElementById('app-ui').style.display = 'flex';
+    document.getElementById('user-email-display').innerText = user.email;
+    document.getElementById('acct-name-display').innerText = user.email;
+    if(user.email) document.getElementById('user-initial').innerText = user.email.charAt(0).toUpperCase();
+    initApp(); 
+  } else {
+    document.getElementById('login-ui').style.display = 'flex';
+    document.getElementById('app-ui').style.display = 'none';
+  }
+});
+
+function handleAuth() {
+  const e = document.getElementById('log-email').value, p = document.getElementById('log-pass').value;
+  if(!e || !p) { document.getElementById('log-err').innerText = 'Please fill out all fields.'; return; }
+  document.getElementById('log-err').innerText = 'Processing...';
+  if (isLoginMode) auth.signInWithEmailAndPassword(e, p).catch(err => document.getElementById('log-err').innerText = err.message);
+  else auth.createUserWithEmailAndPassword(e, p).catch(err => document.getElementById('log-err').innerText = err.message);
+}
+function googleSignIn() {
+  document.getElementById('log-err').innerText = 'Opening Google Sign-in...';
+  auth.signInWithPopup(googleProvider).catch(err => document.getElementById('log-err').innerText = err.message);
+}
+function logout() { auth.signOut(); }
+
+// --- 🧠 APP STATE & MEMORY 🧠 ---
+let keys = JSON.parse(localStorage.getItem('ionith_api_keys_v2')) || { groq:'', google:'', claude:'', tavily:'', telegram:'' };
+let customAiName = localStorage.getItem('ionith_ai_name') || 'Ionith';
+let isLightMode = localStorage.getItem('ionith_light_mode') === 'true';
+
+let allChats = JSON.parse(localStorage.getItem('ionith_all_chats')) || [];
+let currentChatId = localStorage.getItem('ionith_current_chat_id') || null;
+let chatHistory = [];
+let isTyping = false;
+let activeModel = 'Groq';
+
+// 💡 NEW: Global variable for Base64 Image string
+let currentImageB64 = null;
+
+function initApp() {
+  if(isLightMode) document.body.classList.add('light-mode');
+  checkKeyStatus();
+  applyPersonaName();
+  if (!currentChatId && allChats.length > 0) { currentChatId = allChats[0].id; chatHistory = allChats[0].history; } 
+  else if (currentChatId) { let found = allChats.find(c => c.id === currentChatId); if(found) chatHistory = found.history; }
+  renderSidebar(); renderChat();
+}
+
+function applyPersonaName() {
+  document.getElementById('header-ai-name').innerText = customAiName.toUpperCase();
+  document.getElementById('ta').placeholder = `Message ${customAiName}...`;
+}
+
+function checkKeyStatus() {
+  const dot = document.getElementById('k-status');
+  if (keys.groq || keys.google || keys.claude) dot.classList.add('active'); else dot.classList.remove('active');
+}
+
+// ── VAULT LOGIC ──
+function openVault() {
+  document.getElementById('k-groq').value = keys.groq || '';
+  document.getElementById('k-google').value = keys.google || '';
+  document.getElementById('k-claude').value = keys.claude || '';
+  document.getElementById('k-tavily').value = keys.tavily || '';
+  document.getElementById('k-telegram').value = keys.telegram || '';
+  document.getElementById('key-modal').classList.add('active');
+}
+function saveVault() {
+  keys.groq = document.getElementById('k-groq').value.trim();
+  keys.google = document.getElementById('k-google').value.trim();
+  keys.claude = document.getElementById('k-claude').value.trim();
+  keys.tavily = document.getElementById('k-tavily').value.trim();
+  keys.telegram = document.getElementById('k-telegram').value.trim();
+  localStorage.setItem('ionith_api_keys_v2', JSON.stringify(keys));
+  checkKeyStatus();
+  document.getElementById('key-modal').classList.remove('active');
+}
+
+// ── MASTER SETTINGS ──
+function openMasterSettings() {
+  document.getElementById('set-ainame').value = customAiName !== 'Ionith' ? customAiName : '';
+  document.getElementById('master-settings-modal').classList.add('active');
+}
+function closeMasterSettings() {
+  document.getElementById('master-settings-modal').classList.remove('active');
+}
+function switchSettingsTab(tabId, btnElement) {
+  document.querySelectorAll('.sm-tab').forEach(el => el.classList.remove('active'));
+  btnElement.classList.add('active');
+  document.querySelectorAll('.sm-panel').forEach(el => el.classList.remove('active'));
+  document.getElementById('tab-' + tabId).classList.add('active');
+}
+function savePersonalization() {
+  let inputName = document.getElementById('set-ainame').value.trim();
+  customAiName = inputName ? inputName : 'Ionith';
+  localStorage.setItem('ionith_ai_name', customAiName);
+  applyPersonaName();
+  alert("Persona saved!");
+  renderChat();
+}
+function toggleTheme() {
+  isLightMode = !isLightMode;
+  document.body.classList.toggle('light-mode', isLightMode);
+  localStorage.setItem('ionith_light_mode', isLightMode);
+}
+function clearLocalChats() {
+  if(confirm("Delete all chat history from this device?")) {
+    allChats = []; chatHistory = []; currentChatId = null;
+    localStorage.removeItem('ionith_all_chats');
+    localStorage.removeItem('ionith_current_chat_id');
+    renderSidebar(); renderChat();
+    closeMasterSettings();
+  }
+}
+
+let mo = false;
+function tMod(){ mo = !mo; document.getElementById('mm').classList.toggle('open', mo); }
+function sM(dName, lName, btn){ activeModel = lName; document.querySelectorAll('.mopt').forEach(b => b.classList.remove('sel')); btn.classList.add('sel'); document.getElementById('ml').textContent = dName; tMod(); document.getElementById('plus-dd').classList.remove('open'); }
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 150) + 'px'; document.getElementById('snd').disabled = el.value.trim() === ''; }
+function checkEnter(e) { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } }
+function newChat() { currentChatId = Date.now().toString(); chatHistory = []; localStorage.setItem('ionith_current_chat_id', currentChatId); renderSidebar(); renderChat(); }
+function loadChat(id) { let found = allChats.find(c => c.id === id); if(found) { currentChatId = id; chatHistory = found.history; localStorage.setItem('ionith_current_chat_id', currentChatId); renderSidebar(); renderChat(); } }
+function searchChats(q) { q = q.toLowerCase(); document.querySelectorAll('.citem').forEach(el => { el.style.display = el.querySelector('span').textContent.toLowerCase().includes(q) ? '' : 'none'; }); }
+
+async function saveChatToStorage() {
+  if(chatHistory.length === 0) return; 
+  if(!currentChatId) currentChatId = Date.now().toString();
+  let rawTitle = chatHistory[0].content;
+  // If the first message is an image attachment flag, use a placeholder title
+  if(rawTitle === "[Image Attachment]") rawTitle = "Image Analysis";
+  let title = rawTitle.length > 25 ? rawTitle.substring(0, 25) + "..." : rawTitle;
+  
+  let chatObject = { id: currentChatId, title: title, history: chatHistory };
+  let existingIndex = allChats.findIndex(c => c.id === currentChatId);
+  if(existingIndex >= 0) allChats[existingIndex] = chatObject; else allChats.unshift(chatObject); 
+  
+  localStorage.setItem('ionith_all_chats', JSON.stringify(allChats));
+  localStorage.setItem('ionith_current_chat_id', currentChatId);
+  renderSidebar();
+
+  const user = auth.currentUser;
+  if(user) {
+    try {
+      await db.collection('users').doc(user.uid).collection('chats').doc(currentChatId).set({
+        id: currentChatId, title: title, history: chatHistory, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) { console.error("Cloud save failed", e); }
+  }
+}
+
+// ── ACTION BUTTON LOGIC ──
+function copyMsg(idx, btn) {
+  let content = chatHistory[idx].content;
+  if(content === "[Image Attachment]") content = "Image attached.";
+  navigator.clipboard.writeText(content);
+  let oldCol = btn.style.color;
+  btn.style.color = '#10b981';
+  setTimeout(() => btn.style.color = oldCol, 1500);
+}
+function editMsg(idx) {
+  let content = chatHistory[idx].content;
+  if(content !== "[Image Attachment]") document.getElementById('ta').value = content;
+  chatHistory = chatHistory.slice(0, idx);
+  saveChatToStorage(); renderChat(); autoResize(document.getElementById('ta'));
+}
+function redoMsg() {
+  if(chatHistory.length < 2) return;
+  chatHistory.pop(); 
+  let lastUserMsg = chatHistory.pop().content;
+  if(lastUserMsg !== "[Image Attachment]") document.getElementById('ta').value = lastUserMsg;
+  saveChatToStorage(); renderChat(); sendMessage();
+}
+function likeMsg(idx, btn) { btn.classList.toggle('liked'); btn.nextElementSibling.classList.remove('disliked'); }
+function dislikeMsg(idx, btn) { btn.classList.toggle('disliked'); btn.previousElementSibling.classList.remove('liked'); }
+
+// 💡 NEW: IMAGE PROCESSING (CANVAS COMPRESSION)
+function triggerPhotoUpload() {
+  document.getElementById('plus-dd').classList.remove('open');
+  document.getElementById('hidden-img-input').click();
+}
+
+function processLocalImage(event) {
+  let file = event.target.files[0];
+  if (!file) return;
+
+  let reader = new FileReader();
+  reader.onload = function(e) {
+    let img = new Image();
+    img.onload = function() {
+      // 1. Create invisible canvas
+      let canvas = document.createElement('canvas');
+      let ctx = canvas.getContext('2d');
+      // 2. Set max dimensions (shrinks 5MB files instantly)
+      let maxW = 1024, maxH = 1024;
+      let width = img.width, height = img.height;
+      if (width > height) { if (width > maxW) { height *= maxW / width; width = maxW; } } 
+      else { if (height > maxH) { width *= maxH / height; height = maxH; } }
+      canvas.width = width; canvas.height = height;
+      // 3. Draw & Compress
+      ctx.drawImage(img, 0, 0, width, height);
+      // Gemini requires pure base64 WITHOUT the data header
+      let fullBase64 = canvas.toDataURL('image/jpeg', 0.8);
+      currentImageB64 = fullBase64.split(',')[1]; 
+      
+      // 4. Update UI Badge
+      document.getElementById('attach-badge').style.display = 'inline-flex';
+    }
+    img.src = e.target.result;
+  }
+  reader.readAsDataURL(file);
+}
+
+function clearAttachment() {
+  currentImageB64 = null;
+  document.getElementById('hidden-img-input').value = "";
+  document.getElementById('attach-badge').style.display = 'none';
+}
+
+
+// 💡 CORE SEND FUNCTION
+async function sendMessage() {
+  const ta = document.getElementById('ta');
+  let text = ta.value.trim();
+  
+  // Allow sending if there is text OR an image
+  if (!text && !currentImageB64) return;
+  if (isTyping) return;
+
+  document.getElementById('plus-dd').classList.remove('open');
+
+  let targetKey = '';
+  let modelToUse = activeModel;
+  let webContext = "";
+  const needsWebSearch = /latest|today|now|news|weather|price|search|current|who won/i.test(text);
+
+  // Guard: Only Gemini handles vision in this setup
+  if (currentImageB64 && modelToUse !== 'Google') {
+      alert("Please select 'Reasoning (Gemini)' to analyze images.");
+      return;
+  }
+
+  // Guard: Tavily
+  if (needsWebSearch && !currentImageB64) {
+      if (!keys.tavily) { alert("Web Search aborted: Add your Tavily API Key in the Vault."); return; }
+      renderChatRoutingMsg(`Searching the live web...`);
+      try {
+        const tavRes = await fetch("https://api.tavily.com/search", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ api_key: keys.tavily, query: text, search_depth: "basic", include_answer: true, max_results: 3 })
+        });
+        const tavData = await tavRes.json();
+        if (tavData && tavData.answer) {
+            webContext = `\n\n[LIVE WEB SEARCH DATA]:\nTavily Summary: ${tavData.answer}\nSources to cite: ${tavData.results.map(r => r.url).join(', ')}`;
+        }
+      } catch (e) { console.error("Tavily Search Failed:", e); }
+  }
+
+  if (modelToUse === 'Groq') { targetKey = keys.groq; if(!targetKey) { alert("Missing Groq Key in Vault."); return; } }
+  else if (modelToUse === 'Google') { targetKey = keys.google; if(!targetKey) { alert("Missing Google Gemini Key in Vault."); return; } }
+  else if (modelToUse === 'Claude') { targetKey = keys.claude; if(!targetKey) { alert("Missing Claude Key in Vault."); return; } }
+
+  ta.value = ''; autoResize(ta);
+  document.getElementById('attach-badge').style.display = 'none';
+
+  // Save the image string locally to the chat history object for this specific message
+  let userMsgObj = { role: 'user', content: text || "[Image Attachment]" };
+  if(currentImageB64) {
+      userMsgObj.imgData = currentImageB64;
+  }
+  
+  chatHistory.push(userMsgObj);
+  saveChatToStorage(); 
+  isTyping = true;
+  
+  // Clear the global var so it doesn't attach to the next message
+  let imageToSend = currentImageB64;
+  currentImageB64 = null;
+  document.getElementById('hidden-img-input').value = "";
+
+  let sysPrompt = `You are ${customAiName}, an Omni-Agent. Keep answers concise. Wrap code in markdown.`;
+  if (webContext) sysPrompt += "\n\n" + webContext + "\nAlways use this live data to answer the user's prompt. Cite the sources if helpful.";
+
+  let aiResponseText = "";
+  renderChatRoutingMsg(`Routing to ${modelToUse}...`);
+
+  try {
+    if (modelToUse === 'Groq') {
+      const payloadMsgs = [{ role: "system", content: sysPrompt }, ...chatHistory.map(m => ({role: m.role, content: m.content}))];
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST", headers: { "Authorization": `Bearer ${targetKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: payloadMsgs })
+      });
+      if (!res.ok) throw new Error(`API Error: ${res.status}`);
+      const data = await res.json();
+      aiResponseText = data.choices[0].message.content;
+    } 
+    else if (modelToUse === 'Google') {
+      // Build Gemini Payload with Image Support
+      let geminiHistory = [];
+      chatHistory.forEach(m => {
+          let partObj = { text: m.content };
+          if(m.imgData) {
+              geminiHistory.push({ role: 'user', parts: [ partObj, { inline_data: { mime_type: "image/jpeg", data: m.imgData } } ] });
+          } else {
+              geminiHistory.push({ role: m.role === 'assistant' ? 'model' : 'user', parts: [partObj] });
+          }
+      });
+
+      const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${targetKey}`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ systemInstruction: { parts: [{ text: sysPrompt }] }, contents: geminiHistory })
+      });
+      if (!res.ok) throw new Error(`Google API Error: ${res.status}`);
+      const data = await res.json();
+      aiResponseText = data.candidates[0].content.parts[0].text;
+    }
+    else if (modelToUse === 'Claude') {
+      const payloadMsgs = chatHistory.map(m => ({role: m.role, content: m.content}));
+      const res = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST", headers: { "x-api-key": targetKey, "anthropic-version": "2023-06-01", "content-type": "application/json", "anthropic-dangerous-direct-browser-access": "true" },
+        body: JSON.stringify({ model: "claude-3-5-sonnet-20240620", max_tokens: 1024, system: sysPrompt, messages: payloadMsgs })
+      });
+      if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(`Claude Rejected: ${errData.error?.message || res.status}`);
+      }
+      const data = await res.json();
+      aiResponseText = data.content[0].text;
+    }
+
+    chatHistory.push({ role: 'assistant', content: aiResponseText, model: modelToUse });
+    saveChatToStorage(); 
+
+  } catch (error) {
+    chatHistory.push({ role: 'assistant', content: `❌ ${error.message}`, model: modelToUse });
+  }
+  isTyping = false; renderChat();
+}
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+function renderSidebar() {
+  const sbm = document.getElementById('chat-list');
+  if(allChats.length === 0) { sbm.innerHTML = '<div style="padding:20px 10px; color:var(--fg4); text-align:center;">No recent chats</div>'; return; }
+  let html = '';
+  allChats.forEach(c => { html += `<button class="citem ${c.id===currentChatId?'act':''}" onclick="loadChat('${c.id}')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg><span>${esc(c.title)}</span></button>`; });
+  sbm.innerHTML = html;
+}
+
+function renderChatRoutingMsg(msg) {
+  const c = document.getElementById('ci');
+  let initials = customAiName.substring(0, 2).toUpperCase();
+  c.innerHTML += `<div class="mg"><div class="mr"><div class="mav ai">${initials}</div><div style="display:flex; flex-direction:column; max-width:80%;"><span style="font-size:9px; font-family:var(--fm); color:var(--blue); margin-left:2px; margin-bottom:3px; text-transform:uppercase;">${msg}</span><div class="bb ai"><span class="tdot"></span><span class="tdot" style="margin:0 3px"></span><span class="tdot"></span></div></div></div></div>`;
+  const ca = document.getElementById('ca'); ca.scrollTo({ top: ca.scrollHeight });
+}
+
+function renderChat() {
+  const c = document.getElementById('ci');
+  if (chatHistory.length === 0 && !isTyping) {
+    c.innerHTML = `<div class="es"><div class="es-tag">STANDALONE WEB ENGINE</div><h2 class="es-h">Omni-Agent Ready</h2><p class="es-s">Add your API keys in the Vault to get started.</p></div>`; return;
+  }
+  let h = '';
+  let initials = customAiName.substring(0, 2).toUpperCase();
+
+  chatHistory.forEach((m, index) => {
+    if (m.role === 'user') {
+      let contentHtml = '';
+      if(m.imgData) {
+          contentHtml += `<img src="data:image/jpeg;base64,${m.imgData}" class="chat-img-thumb">`;
+      }
+      if(m.content !== "[Image Attachment]") {
+          contentHtml += `<div>${esc(m.content)}</div>`;
+      }
+
+      h += `
+      <div class="mg">
+        <div class="mr u">
+          <div style="display:flex; flex-direction:column; max-width:80%;">
+             <div class="bb u">${contentHtml}</div>
+             <div class="msg-act u">
+               <button class="btn-act" onclick="editMsg(${index})" title="Edit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+               <button class="btn-act" onclick="copyMsg(${index}, this)" title="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+             </div>
+          </div>
+          <div class="mav me">US</div>
+        </div>
+      </div>`;
+    } else {
+      let displayModel = m.model ? m.model : "Omni-Agent";
+      let formatted = esc(m.content).replace(/```(\w*)\n([\s\S]*?)```/g, (match, lang, code) => {
+        return `<div class="cb-wrap"><div class="cb-head"><span class="cb-lang">${lang||'code'}</span></div><pre><code class="cb-body">${code}</code></pre></div>`;
+      });
+      
+      let redoBtn = (index === chatHistory.length - 1) ? `<button class="btn-act" onclick="redoMsg()" title="Redo Response"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg></button>` : '';
+
+      h += `
+      <div class="mg">
+        <div class="mr">
+          <div class="mav ai">${initials}</div>
+          <div style="display:flex; flex-direction:column; max-width:80%;">
+            <span style="font-size:9px; font-family:var(--fm); color:var(--blue); margin-left:2px; margin-bottom:3px; text-transform:uppercase;">Generated by ${customAiName} (${displayModel})</span>
+            <div class="bb ai">${formatted}</div>
+            <div class="msg-act">
+              <button class="btn-act" onclick="copyMsg(${index}, this)" title="Copy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg></button>
+              <button class="btn-act" onclick="likeMsg(${index}, this)" title="Like"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"></path></svg></button>
+              <button class="btn-act" onclick="dislikeMsg(${index}, this)" title="Dislike"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h2.67A2.31 2.31 0 0 1 22 4v7a2.31 2.31 0 0 1-2.33 2H17"></path></svg></button>
+              ${redoBtn}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+  });
+  c.innerHTML = h;
+  const ca = document.getElementById('ca'); ca.scrollTo({ top: ca.scrollHeight });
+}
+
+window.onclick = function(event) {
+  const setModal = document.getElementById('master-settings-modal');
+  const keyModal = document.getElementById('key-modal');
+  if (event.target === setModal) closeMasterSettings();
+  if (event.target === keyModal) keyModal.classList.remove('active');
+}
+</script>
+</body>
+</html>
